@@ -31,13 +31,12 @@ pipeline {
                 
                 # Update package list and install Python
                 apt-get update
-                apt-get install -y python3 python3-pip python3-venv curl unzip
+                apt-get install -y python3 python3-pip curl unzip
 
-                echo "===== Setting up Python Virtual Environment ====="
-                python3 -m venv venv
-                . venv/bin/activate
-                pip install --upgrade pip
-                pip install -r requirements.txt
+                echo "===== Installing Python Dependencies ====="
+                # Install directly without virtual environment (we're in a container)
+                pip3 install --upgrade pip
+                pip3 install -r requirements.txt
 
                 echo "===== Installing SonarQube Scanner ====="
                 curl -L --output sonar-scanner-cli.zip https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-4.8.0.2856-linux.zip
@@ -49,7 +48,8 @@ pipeline {
                 java -version
                 python3 --version
                 sonar-scanner --version
-                . venv/bin/activate && python -c "import sys; print(sys.version)"
+                python3 -c "import sys; print('Python:', sys.version)"
+                pip3 list | head -10
                 '''
             }
         }
@@ -58,8 +58,7 @@ pipeline {
             steps {
                 sh '''
                 echo "===== Running Tests ====="
-                . venv/bin/activate
-                pytest --maxfail=1 --disable-warnings -q --cov=app --cov-report=xml
+                python3 -m pytest --maxfail=1 --disable-warnings -q --cov=app --cov-report=xml tests/
                 '''
             }
         }
@@ -69,18 +68,7 @@ pipeline {
                 withSonarQubeEnv('Sonarqube') { // Ensure 'Sonarqube' matches Jenkins config
                     sh '''
                     echo "===== Running SonarQube Analysis ====="
-                    # Ensure Java is available
-                    java -version
-                    which java
-                    # Ensure Python venv is active if sonar-scanner needs specific packages
-                    . venv/bin/activate
-                    # Run Sonar Scanner CLI (ensure it's installed in the Jenkins image or install it here)
-                    # If sonar-scanner is not installed globally, you might need to download it or install via pip
-                    # Example installing sonar-scanner CLI (uncomment if needed):
-                    # curl -L --output sonar-scanner-cli.zip https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-4.8.0.2856-linux.zip
-                    # unzip sonar-scanner-cli.zip
-                    # export PATH=$PWD/sonar-scanner-4.8.0.2856-linux/bin:$PATH
-
+                    # Run SonarQube scanner
                     sonar-scanner
                     '''
                 }
