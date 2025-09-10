@@ -27,7 +27,22 @@ pipeline {
                 pip install --upgrade pip
                 pip install -r requirements.txt
 
+                # Install Java (required for SonarQube Scanner)
+                echo "===== Installing Java ====="
+                apt-get update
+                apt-get install -y openjdk-11-jre-headless
+
+                # Install SonarQube Scanner
+                echo "===== Installing SonarQube Scanner ====="
+                curl -L --output sonar-scanner-cli.zip https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-4.8.0.2856-linux.zip
+                unzip sonar-scanner-cli.zip
+                mv sonar-scanner-4.8.0.2856-linux /opt/sonar-scanner
+                ln -sf /opt/sonar-scanner/bin/sonar-scanner /usr/local/bin/sonar-scanner
+
                 # Verify installations
+                echo "===== Verification ====="
+                java -version
+                sonar-scanner --version
                 . venv/bin/activate && python -c "import sys; print(sys.version)"
                 . venv/bin/activate && pip list
                 '''
@@ -49,18 +64,9 @@ pipeline {
                 withSonarQubeEnv('Sonarqube') { // Ensure 'Sonarqube' matches Jenkins config
                     sh '''
                     echo "===== Running SonarQube Analysis ====="
-                    # Ensure Java is available
-                    java -version
-                    which java
                     # Ensure Python venv is active if sonar-scanner needs specific packages
                     . venv/bin/activate
-                    # Run Sonar Scanner CLI (ensure it's installed in the Jenkins image or install it here)
-                    # If sonar-scanner is not installed globally, you might need to download it or install via pip
-                    # Example installing sonar-scanner CLI (uncomment if needed):
-                    # curl -L --output sonar-scanner-cli.zip https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-4.8.0.2856-linux.zip
-                    # unzip sonar-scanner-cli.zip
-                    # export PATH=$PWD/sonar-scanner-4.8.0.2856-linux/bin:$PATH
-
+                    # Run Sonar Scanner CLI
                     sonar-scanner
                     '''
                 }
