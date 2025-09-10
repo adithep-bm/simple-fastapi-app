@@ -1,10 +1,11 @@
 pipeline {
-    agent {
-        docker {
-            image 'openjdk:11-jdk'
-            args '-v /var/run/docker.sock:/var/run/docker.sock'
-        }
-    }
+    // agent {
+    //     docker {
+    //         image 'openjdk:11-jdk'
+    //         args '-v /var/run/docker.sock:/var/run/docker.sock'
+    //     }
+    // }
+    agent any
 
     environment {
         SONARQUBE = credentials('sonarqube_token')
