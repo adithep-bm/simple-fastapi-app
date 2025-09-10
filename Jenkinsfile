@@ -1,11 +1,10 @@
 pipeline {
-    // agent {
-    //     docker {
-    //         image 'openjdk:11-jdk'
-    //         args '-v /var/run/docker.sock:/var/run/docker.sock'
-    //     }
-    // }
-    agent any
+    agent {
+        docker {
+            image 'openjdk:11-jdk'
+            args '-v /var/run/docker.sock:/var/run/docker.sock -u root'
+        }
+    }
 
     environment {
         SONARQUBE = credentials('sonarqube_token')
@@ -21,16 +20,36 @@ pipeline {
        stage('Setup Environment (Python)') {
             steps {
                 sh '''
+                echo "===== Checking User and Permissions ====="
+                whoami
+                id
+                
+                echo "===== Installing Python ====="
+                # Create missing directories and fix permissions
+                mkdir -p /var/lib/apt/lists/partial
+                mkdir -p /var/cache/apt/archives/partial
+                
+                # Update package list and install Python
+                apt-get update
+                apt-get install -y python3 python3-pip python3-venv curl unzip
+
                 echo "===== Setting up Python Virtual Environment ====="
-                # Use system python3 or the one available in the Jenkins image
                 python3 -m venv venv
                 . venv/bin/activate
                 pip install --upgrade pip
                 pip install -r requirements.txt
 
-                # Verify installations
+                echo "===== Installing SonarQube Scanner ====="
+                curl -L --output sonar-scanner-cli.zip https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-4.8.0.2856-linux.zip
+                unzip sonar-scanner-cli.zip
+                mv sonar-scanner-4.8.0.2856-linux /opt/sonar-scanner
+                ln -sf /opt/sonar-scanner/bin/sonar-scanner /usr/local/bin/sonar-scanner
+
+                echo "===== Verification ====="
+                java -version
+                python3 --version
+                sonar-scanner --version
                 . venv/bin/activate && python -c "import sys; print(sys.version)"
-                . venv/bin/activate && pip list
                 '''
             }
         }
