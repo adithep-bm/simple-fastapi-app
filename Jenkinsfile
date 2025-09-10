@@ -20,10 +20,16 @@ pipeline {
         stage('Setup venv') {
             steps {
                 sh '''
+                echo "===== Setting up Python Virtual Environment ====="
+                # Use system python3 or the one available in the Jenkins image
                 python3 -m venv venv
                 . venv/bin/activate
                 pip install --upgrade pip
                 pip install -r requirements.txt
+
+                # Verify installations
+                . venv/bin/activate && python -c "import sys; print(sys.version)"
+                . venv/bin/activate && pip list
                 '''
             }
         }
