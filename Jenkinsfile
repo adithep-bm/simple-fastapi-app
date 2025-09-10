@@ -29,9 +29,23 @@ pipeline {
                 mkdir -p /var/lib/apt/lists/partial
                 mkdir -p /var/cache/apt/archives/partial
                 
-                # Update package list and install Python
-                apt-get update
-                apt-get install -y python3 python3-pip curl unzip
+                # Check which package manager is available and update package list
+                if command -v apt-get >/dev/null 2>&1; then
+                    apt-get update
+                    apt-get install -y python3 python3-pip curl unzip
+                elif command -v yum >/dev/null 2>&1; then
+                    yum update -y
+                    yum install -y python3 python3-pip curl unzip
+                elif command -v microdnf >/dev/null 2>&1; then
+                    microdnf update
+                    microdnf install -y python3 python3-pip curl unzip
+                elif command -v apk >/dev/null 2>&1; then
+                    apk update
+                    apk add --no-cache python3 py3-pip curl unzip
+                else
+                    echo "No supported package manager found"
+                    exit 1
+                fi
 
                 echo "===== Installing Python Dependencies ====="
                 # Install directly without virtual environment (we're in a container)
