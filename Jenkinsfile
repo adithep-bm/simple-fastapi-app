@@ -54,11 +54,30 @@ pipeline {
                 fi
 
                 echo "===== Setting up Python Virtual Environment ====="
-                # Create virtual environment to avoid externally-managed-environment error
-                python3 -m venv venv
-                . venv/bin/activate
-                pip install --upgrade pip
-                pip install -r requirements.txt
+                # Remove any existing venv directory
+                rm -rf venv
+                
+                # Create virtual environment with multiple fallback methods
+                if python3 -m venv venv --copies; then
+                    echo "Created venv with --copies"
+                elif python3 -m venv venv --system-site-packages; then
+                    echo "Created venv with --system-site-packages"
+                elif python3 -c "import venv; venv.create('venv', with_pip=True)"; then
+                    echo "Created venv with Python API"
+                else
+                    echo "Failed to create venv, installing packages globally with --break-system-packages"
+                    pip3 install --upgrade pip --break-system-packages
+                    pip3 install -r requirements.txt --break-system-packages
+                    # Skip venv activation for the rest of the script
+                    echo "export SKIP_VENV=true" > /tmp/venv_status
+                fi
+                
+                # Only activate venv if it was created successfully
+                if [ ! -f "/tmp/venv_status" ] && [ -f "venv/bin/activate" ]; then
+                    . venv/bin/activate
+                    pip install --upgrade pip
+                    pip install -r requirements.txt
+                fi
 
                 echo "===== Installing SonarQube Scanner ====="
                 # Use latest SonarQube Scanner with Java 17
@@ -71,8 +90,17 @@ pipeline {
                 java -version
                 python3 --version
                 sonar-scanner --version
-                . venv/bin/activate && python -c "import sys; print('Python:', sys.version)"
-                . venv/bin/activate && pip list | head -10
+                
+                # Check Python environment
+                if [ -f "venv/bin/activate" ]; then
+                    echo "Using virtual environment:"
+                    . venv/bin/activate && python -c "import sys; print('Python:', sys.version)"
+                    . venv/bin/activate && pip list | head -10
+                else
+                    echo "Using global Python:"
+                    python3 -c "import sys; print('Python:', sys.version)"
+                    pip3 list | head -10
+                fi
                 '''
             }
         }
@@ -81,8 +109,16 @@ pipeline {
             steps {
                 sh '''
                 echo "===== Running Tests ====="
-                . venv/bin/activate
-                python -m pytest --maxfail=1 --disable-warnings -q --cov=app --cov-report=xml tests/
+                
+                # Use virtual environment if available, otherwise use global Python
+                if [ -f "venv/bin/activate" ]; then
+                    echo "Using virtual environment for tests"
+                    . venv/bin/activate
+                    python -m pytest --maxfail=1 --disable-warnings -q --cov=app --cov-report=xml tests/
+                else
+                    echo "Using global Python for tests"
+                    python3 -m pytest --maxfail=1 --disable-warnings -q --cov=app --cov-report=xml tests/
+                fi
                 '''
             }
         }
