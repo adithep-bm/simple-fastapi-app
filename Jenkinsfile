@@ -2,7 +2,7 @@ pipeline {
     agent {
         docker {
             image 'openjdk:11-jdk'
-            args '-v /var/run/docker.sock:/var/run/docker.sock -u root'
+            args '-v /var/run/docker.sock:/var/run/docker.sock'
         }
     }
 
@@ -19,38 +19,22 @@ pipeline {
 
         stage('Setup Environment (Python)') {
             steps {
-                sh '''
-                echo "===== Checking User and Permissions ====="
-                whoami
-                id
-                
-                echo "===== Installing Python ====="
-                # Create missing directories and fix permissions
-                mkdir -p /var/lib/apt/lists/partial
-                mkdir -p /var/cache/apt/archives/partial
-                
-                # Update package list and install Python
-                apt-get update
-                apt-get install -y python3 python3-pip python3-venv curl unzip
+               sh '''
+                    echo "===== Running SonarQube Analysis ====="
+                    # Ensure Java is available
+                    java -version
+                    which java
+                    # Ensure Python venv is active if sonar-scanner needs specific packages
+                    . venv/bin/activate
+                    # Run Sonar Scanner CLI (ensure it's installed in the Jenkins image or install it here)
+                    # If sonar-scanner is not installed globally, you might need to download it or install via pip
+                    # Example installing sonar-scanner CLI (uncomment if needed):
+                    # curl -L --output sonar-scanner-cli.zip https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-4.8.0.2856-linux.zip
+                    # unzip sonar-scanner-cli.zip
+                    # export PATH=$PWD/sonar-scanner-4.8.0.2856-linux/bin:$PATH
 
-                echo "===== Setting up Python Virtual Environment ====="
-                python3 -m venv venv
-                . venv/bin/activate
-                pip install --upgrade pip
-                pip install -r requirements.txt
-
-                echo "===== Installing SonarQube Scanner ====="
-                curl -L --output sonar-scanner-cli.zip https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-4.8.0.2856-linux.zip
-                unzip sonar-scanner-cli.zip
-                mv sonar-scanner-4.8.0.2856-linux /opt/sonar-scanner
-                ln -sf /opt/sonar-scanner/bin/sonar-scanner /usr/local/bin/sonar-scanner
-
-                echo "===== Verification ====="
-                java -version
-                python3 --version
-                sonar-scanner --version
-                . venv/bin/activate && python -c "import sys; print(sys.version)"
-                '''
+                    sonar-scanner
+                    '''
             }
         }
 
