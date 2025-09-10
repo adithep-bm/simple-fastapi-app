@@ -32,7 +32,7 @@ pipeline {
                 # Check which package manager is available and update package list
                 if command -v apt-get >/dev/null 2>&1; then
                     apt-get update
-                    apt-get install -y python3 python3-pip curl unzip
+                    apt-get install -y python3 python3-pip python3-venv curl unzip
                 elif command -v yum >/dev/null 2>&1; then
                     yum update -y
                     # Try to install Python 3.8+ for Oracle Linux
@@ -53,10 +53,12 @@ pipeline {
                     exit 1
                 fi
 
-                echo "===== Installing Python Dependencies ====="
-                # Install directly without virtual environment (we're in a container)
-                pip3 install --upgrade pip
-                pip3 install -r requirements.txt
+                echo "===== Setting up Python Virtual Environment ====="
+                # Create virtual environment to avoid externally-managed-environment error
+                python3 -m venv venv
+                . venv/bin/activate
+                pip install --upgrade pip
+                pip install -r requirements.txt
 
                 echo "===== Installing SonarQube Scanner ====="
                 # Use latest SonarQube Scanner with Java 17
@@ -69,8 +71,8 @@ pipeline {
                 java -version
                 python3 --version
                 sonar-scanner --version
-                python3 -c "import sys; print('Python:', sys.version)"
-                pip3 list | head -10
+                . venv/bin/activate && python -c "import sys; print('Python:', sys.version)"
+                . venv/bin/activate && pip list | head -10
                 '''
             }
         }
@@ -79,7 +81,8 @@ pipeline {
             steps {
                 sh '''
                 echo "===== Running Tests ====="
-                python3 -m pytest --maxfail=1 --disable-warnings -q --cov=app --cov-report=xml tests/
+                . venv/bin/activate
+                python -m pytest --maxfail=1 --disable-warnings -q --cov=app --cov-report=xml tests/
                 '''
             }
         }
