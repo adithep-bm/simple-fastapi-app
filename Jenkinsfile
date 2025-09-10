@@ -1,7 +1,7 @@
 pipeline {
     agent {
         docker {
-            image 'openjdk:11-jdk'
+            image 'openjdk:17-jdk'
             args '-v /var/run/docker.sock:/var/run/docker.sock -u root'
         }
     }
@@ -39,6 +39,7 @@ pipeline {
                 pip3 install -r requirements.txt
 
                 echo "===== Installing SonarQube Scanner ====="
+                # Use latest SonarQube Scanner with Java 17
                 curl -L --output sonar-scanner-cli.zip https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-4.8.0.2856-linux.zip
                 unzip sonar-scanner-cli.zip
                 mv sonar-scanner-4.8.0.2856-linux /opt/sonar-scanner
