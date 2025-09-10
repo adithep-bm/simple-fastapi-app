@@ -1,7 +1,7 @@
 pipeline {
     agent {
         docker {
-            image 'openjdk:17-jdk'
+            image 'eclipse-temurin:17-jdk'
             args '-v /var/run/docker.sock:/var/run/docker.sock -u root'
         }
     }
@@ -35,7 +35,13 @@ pipeline {
                     apt-get install -y python3 python3-pip curl unzip
                 elif command -v yum >/dev/null 2>&1; then
                     yum update -y
-                    yum install -y python3 python3-pip curl unzip
+                    # Try to install Python 3.8+ for Oracle Linux
+                    yum install -y python38 python38-pip curl unzip || yum install -y python3 python3-pip curl unzip
+                    # Create symlinks if python38 was installed
+                    if command -v python3.8 >/dev/null 2>&1; then
+                        ln -sf /usr/bin/python3.8 /usr/bin/python3
+                        ln -sf /usr/bin/pip3.8 /usr/bin/pip3
+                    fi
                 elif command -v microdnf >/dev/null 2>&1; then
                     microdnf update
                     microdnf install -y python3 python3-pip curl unzip
