@@ -2,7 +2,7 @@ pipeline {
     agent {
         docker {
             image 'openjdk:11-jdk'
-            args '-v /var/run/docker.sock:/var/run/docker.sock'
+            args '-v /var/run/docker.sock:/var/run/docker.sock -u root'
         }
     }
 
@@ -20,7 +20,15 @@ pipeline {
         stage('Setup Environment (Python)') {
             steps {
                 sh '''
+                echo "===== Checking User and Permissions ====="
+                whoami
+                id
+                
                 echo "===== Installing Python ====="
+                # Create missing directories and fix permissions
+                mkdir -p /var/lib/apt/lists/partial
+                mkdir -p /var/cache/apt/archives/partial
+                
                 # Update package list and install Python
                 apt-get update
                 apt-get install -y python3 python3-pip python3-venv curl unzip
