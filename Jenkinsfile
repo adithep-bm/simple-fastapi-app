@@ -80,16 +80,24 @@ pipeline {
                 fi
 
                 echo "===== Installing SonarQube Scanner ====="
-                # Use SonarQube Scanner latest version with Java 21
-                curl -L --output sonar-scanner-cli.zip https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-4.8.0.2856-linux.zip
-                unzip sonar-scanner-cli.zip
-                mv sonar-scanner-4.8.0.2856-linux /opt/sonar-scanner
-                ln -sf /opt/sonar-scanner/bin/sonar-scanner /usr/local/bin/sonar-scanner
+                # Install Docker (if not already available)
+                if ! command -v docker >/dev/null 2>&1; then
+                    apt-get update
+                    apt-get install -y ca-certificates curl gnupg lsb-release
+                    mkdir -p /etc/apt/keyrings
+                    curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+                    echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null
+                    apt-get update
+                    apt-get install -y docker-ce-cli
+                fi
+                
+                echo "===== SonarQube Scanner will use Docker ====="
+                # We'll use docker run command in SonarQube Analysis stage
 
                 echo "===== Verification ====="
                 java -version
                 python3 --version
-                sonar-scanner --version
+                docker --version
                 
                 # Check Python environment
                 if [ -f "venv/bin/activate" ]; then
@@ -127,9 +135,17 @@ pipeline {
             steps {
                 withSonarQubeEnv('Sonarqube') { // Ensure 'Sonarqube' matches Jenkins config
                     sh '''
-                    echo "===== Running SonarQube Analysis ====="
-                    # Run SonarQube scanner
-                    sonar-scanner
+                    echo "===== Running SonarQube Analysis with Docker ====="
+                    
+                    # Get current working directory
+                    WORKSPACE_DIR=$(pwd)
+                    
+                    # Run SonarQube Scanner using Docker
+                    docker run --rm \
+                        -e SONAR_HOST_URL="${SONAR_HOST_URL}" \
+                        -e SONAR_LOGIN="${SONAR_AUTH_TOKEN}" \
+                        -v "${WORKSPACE_DIR}:/usr/src" \
+                        sonarsource/sonar-scanner-cli:latest
                     '''
                 }
             }
