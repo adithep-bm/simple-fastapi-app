@@ -1,8 +1,9 @@
 pipeline {
     agent {
         docker {
-            image 'python:3.11'
-            args '-v /var/run/docker.sock:/var/run/docker.sock'
+        image 'python:3.11'
+        // รันเป็น root + เมานต์ docker.sock (ถ้าคุณยังต้องใช้ docker ภายหลัง)
+        args '-u root -v /var/run/docker.sock:/var/run/docker.sock'
         }
     }
 
