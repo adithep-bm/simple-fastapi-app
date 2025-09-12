@@ -8,11 +8,11 @@ pipeline {
 
     options { timestamps() }
 
-    environment {
+    // environment {
         // ไม่ต้องกำหนด token เอง ถ้าใช้ withSonarQubeEnv
         // SONARQUBE = credentials('sonarqube_token')
         // (ลบทิ้งได้)
-    }
+    // }
 
     stages {
         stage('Checkout') {
