@@ -14,15 +14,23 @@ pipeline {
                 git branch: 'main', url: 'https://github.com/adithep-bm/simple-fastapi-app.git'
             }
         }
-        stage('Install SonarQube Scanner') {
+        stage('Install SonarQube Scanner & Docker CLI') {
             steps {
                 sh '''
-                apt-get update && apt-get install -y wget unzip openjdk-17-jre-headless
+                apt-get update && apt-get install -y wget unzip openjdk-17-jre-headless curl apt-transport-https ca-certificates gnupg lsb-release
+                
+                # Install SonarQube Scanner
                 cd /tmp
                 wget https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-7.2.0.5079-linux-x64.zip
                 unzip sonar-scanner-cli-7.2.0.5079-linux-x64.zip
                 mv sonar-scanner-7.2.0.5079-linux-x64 /opt/sonar-scanner
                 ln -s /opt/sonar-scanner/bin/sonar-scanner /usr/local/bin/sonar-scanner
+                
+                # Install Docker CLI
+                curl -fsSL https://download.docker.com/linux/debian/gpg | gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
+                echo "deb [arch=amd64 signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/debian $(lsb_release -cs) stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null
+                apt-get update
+                apt-get install -y docker-ce-cli
                 '''
             }
         }
