@@ -14,6 +14,18 @@ pipeline {
                 git branch: 'main', url: 'https://github.com/adithep-bm/simple-fastapi-app.git'
             }
         }
+        stage('Install SonarQube Scanner') {
+            steps {
+                sh '''
+                apt-get update && apt-get install -y wget unzip openjdk-17-jre-headless
+                cd /tmp
+                wget https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-7.2.0.5079-linux-x64.zip
+                unzip sonar-scanner-cli-7.2.0.5079-linux-x64.zip
+                mv sonar-scanner-7.2.0.5079-linux-x64 /opt/sonar-scanner
+                ln -s /opt/sonar-scanner/bin/sonar-scanner /usr/local/bin/sonar-scanner
+                '''
+            }
+        }
         stage('Install Dependencies') {
             steps {
                 sh '''
@@ -39,24 +51,16 @@ pipeline {
         }
         stage('SonarQube Analysis') {
             steps {
-                script {
-                    withSonarQubeEnv('Sonarqube') {
-                        sh '''
-                        docker run --rm \
-                            -e SONAR_HOST_URL=${SONAR_HOST_URL} \
-                            -e SONAR_TOKEN=${SONAR_AUTH_TOKEN} \
-                            -v "${WORKSPACE}":/usr/src \
-                            -w /usr/src \
-                            --add-host=host.docker.internal:host-gateway \
-                            sonarsource/sonar-scanner-cli:latest \
-                            -Dsonar.projectKey=fastapi \
-                            -Dsonar.projectName=FastAPI-App \
-                            -Dsonar.projectVersion=1.0 \
-                            -Dsonar.sources=app \
-                            -Dsonar.sourceEncoding=UTF-8 \
-                            -Dsonar.python.coverage.reportPaths=coverage.xml
-                        '''
-                    }
+                withSonarQubeEnv('Sonarqube') {
+                    sh '''
+                    sonar-scanner \
+                        -Dsonar.projectKey=fastapi \
+                        -Dsonar.projectName=FastAPI-App \
+                        -Dsonar.projectVersion=1.0 \
+                        -Dsonar.sources=app \
+                        -Dsonar.sourceEncoding=UTF-8 \
+                        -Dsonar.python.coverage.reportPaths=coverage.xml
+                    '''
                 }
             }
         }
