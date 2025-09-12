@@ -50,9 +50,8 @@ pipeline {
         stage('SonarQube Analysis') {
             steps {
                 withSonarQubeEnv('Sonarqube') {
-                def scannerHome = tool 'SonarQubeScanner'
                 sh """
-                    "${scannerHome}/bin/sonar-scanner" \
+                    "${tool 'SonarQubeScanner'}/bin/sonar-scanner" \
                     -Dsonar.projectKey=fastapi \
                     -Dsonar.sources=app \
                     -Dsonar.tests=tests \
