@@ -17,6 +17,10 @@ pipeline {
         stage('Install Dependencies') {
             steps {
                 sh '''
+                export HOME=/tmp/jenkins_home
+                mkdir -p $HOME/.local/bin
+                export PATH=$HOME/.local/bin:$PATH
+                export PYTHONUSERBASE=$HOME/.local
                 python -m pip install --user --upgrade pip
                 python -m pip install --user -r requirements.txt
                 '''
@@ -26,7 +30,9 @@ pipeline {
         stage('Run Tests & Coverage') {
             steps {
                 sh '''
+                export HOME=/tmp/jenkins_home
                 export PATH=$HOME/.local/bin:$PATH
+                export PYTHONUSERBASE=$HOME/.local
                 python -m pytest --maxfail=1 --disable-warnings -q --cov=app --cov-report=xml
                 '''
             }
