@@ -33,11 +33,41 @@ pipeline {
                 '''
             }
         }
+        stage('Install SonarQube Scanner') {
+            steps {
+                sh '''
+                # ติดตั้ง SonarQube Scanner
+                apt-get update
+                apt-get install -y wget unzip
+                wget https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-4.8.0.2856-linux.zip
+                unzip sonar-scanner-cli-4.8.0.2856-linux.zip -d /tmp/
+                mv /tmp/sonar-scanner-4.8.0.2856-linux /tmp/sonar-scanner
+                '''
+            }
+        }
+        
         stage('SonarQube Analysis') {
             steps {
                 withSonarQubeEnv('Sonarqube') {
-                    sh 'sonar-scanner'
+                    sh '''
+                    export PATH=/tmp/sonar-scanner/bin:$PATH
+                    sonar-scanner
+                    '''
                 }
+            }
+        }
+
+        stage('Install Docker CLI') {
+            steps {
+                sh '''
+                # ติดตั้ง Docker CLI
+                apt-get update
+                apt-get install -y apt-transport-https ca-certificates curl gnupg lsb-release
+                curl -fsSL https://download.docker.com/linux/debian/gpg | gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
+                echo "deb [arch=amd64 signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/debian $(lsb_release -cs) stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null
+                apt-get update
+                apt-get install -y docker-ce-cli
+                '''
             }
         }
 
