@@ -14,11 +14,11 @@ pipeline {
                 git branch: 'main', url: 'https://github.com/adithep-bm/simple-fastapi-app.git'
             }
         }
-        stage('Setup venv') {
+        stage('Install Dependencies') {
             steps {
                 sh '''
-                pip install --upgrade pip
-                pip install -r requirements.txt
+                python -m pip install --user --upgrade pip
+                python -m pip install --user -r requirements.txt
                 '''
             }
         }
@@ -26,7 +26,8 @@ pipeline {
         stage('Run Tests & Coverage') {
             steps {
                 sh '''
-                pytest --maxfail=1 --disable-warnings -q --cov=app --cov-report=xml
+                export PATH=$HOME/.local/bin:$PATH
+                python -m pytest --maxfail=1 --disable-warnings -q --cov=app --cov-report=xml
                 '''
             }
         }
