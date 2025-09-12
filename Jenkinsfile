@@ -140,11 +140,22 @@ pipeline {
                     # Get current working directory
                     WORKSPACE_DIR=$(pwd)
                     
-                    # Run SonarQube Scanner using Docker
+                    # Debug: Show environment variables
+                    echo "SONAR_HOST_URL: ${SONAR_HOST_URL}"
+                    echo "SONAR_AUTH_TOKEN: [HIDDEN]"
+                    
+                    # Override SONAR_HOST_URL to use host network instead of container IP
+                    # Use host.docker.internal or the actual Jenkins host IP
+                    SONAR_HOST_URL_OVERRIDE="http://host.docker.internal:9000"
+                    
+                    echo "Using SONAR_HOST_URL_OVERRIDE: ${SONAR_HOST_URL_OVERRIDE}"
+                    
+                    # Run SonarQube Scanner using Docker with proper token and host network
                     docker run --rm \
-                        -e SONAR_HOST_URL="${SONAR_HOST_URL}" \
-                        -e SONAR_LOGIN="${SONAR_AUTH_TOKEN}" \
+                        -e SONAR_HOST_URL="${SONAR_HOST_URL_OVERRIDE}" \
+                        -e SONAR_TOKEN="${SONAR_AUTH_TOKEN}" \
                         -v "${WORKSPACE_DIR}:/usr/src" \
+                        --add-host=host.docker.internal:host-gateway \
                         sonarsource/sonar-scanner-cli:latest
                     '''
                 }
