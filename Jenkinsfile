@@ -23,8 +23,8 @@ pipeline {
                 cd /tmp
                 wget https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-7.2.0.5079-linux-x64.zip
                 unzip sonar-scanner-cli-7.2.0.5079-linux-x64.zip
-                mv sonar-scanner-7.2.0.5079-linux-x64 /opt/sonar-scanner
-                ln -s /opt/sonar-scanner/bin/sonar-scanner /usr/local/bin/sonar-scanner
+                mv sonar-scanner-7.2.0.5079-linux-x64 /tmp/sonar-scanner
+                export PATH=/tmp/sonar-scanner/bin:$PATH
                 
                 # Install Docker CLI
                 curl -fsSL https://download.docker.com/linux/debian/gpg | gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
@@ -61,6 +61,7 @@ pipeline {
             steps {
                 withSonarQubeEnv('Sonarqube') {
                     sh '''
+                    export PATH=/tmp/sonar-scanner/bin:$PATH
                     sonar-scanner \
                         -Dsonar.projectKey=fastapi \
                         -Dsonar.projectName=FastAPI-App \
