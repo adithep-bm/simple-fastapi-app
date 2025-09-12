@@ -39,16 +39,24 @@ pipeline {
         }
         stage('SonarQube Analysis') {
             steps {
-                withSonarQubeEnv('Sonarqube') {
-                    sh '''
-                    sonar-scanner \
-                        -Dsonar.projectKey=fastapi \
-                        -Dsonar.projectName=FastAPI-App \
-                        -Dsonar.projectVersion=1.0 \
-                        -Dsonar.sources=app \
-                        -Dsonar.sourceEncoding=UTF-8 \
-                        -Dsonar.python.coverage.reportPaths=coverage.xml
-                    '''
+                script {
+                    withSonarQubeEnv('Sonarqube') {
+                        sh '''
+                        docker run --rm \
+                            -e SONAR_HOST_URL=${SONAR_HOST_URL} \
+                            -e SONAR_TOKEN=${SONAR_AUTH_TOKEN} \
+                            -v "${WORKSPACE}":/usr/src \
+                            -w /usr/src \
+                            --add-host=host.docker.internal:host-gateway \
+                            sonarsource/sonar-scanner-cli:latest \
+                            -Dsonar.projectKey=fastapi \
+                            -Dsonar.projectName=FastAPI-App \
+                            -Dsonar.projectVersion=1.0 \
+                            -Dsonar.sources=app \
+                            -Dsonar.sourceEncoding=UTF-8 \
+                            -Dsonar.python.coverage.reportPaths=coverage.xml
+                        '''
+                    }
                 }
             }
         }
