@@ -1,215 +1,56 @@
 pipeline {
     agent {
         docker {
-            image 'eclipse-temurin:21-jdk'
-            args '--privileged -v /var/run/docker.sock:/var/run/docker.sock --user root'
+            image 'python:3.11'     // Docker image ที่ต้องการใช้
+            args '-v /var/run/docker.sock:/var/run/docker.sock'  // optional ถ้าต้องใช้ Docker CLI
         }
     }
-
     environment {
         SONARQUBE = credentials('sonarqube_token')
     }
-
     stages {
         stage('Checkout') {
             steps {
                 git branch: 'main', url: 'https://github.com/adithep-bm/simple-fastapi-app.git'
             }
         }
-
-       stage('Setup Environment (Python)') {
+        stage('Setup venv') {
             steps {
                 sh '''
-                echo "===== Checking User and Permissions ====="
-                whoami
-                id
-                
-                echo "===== Installing Python ====="
-                # Create missing directories and fix permissions
-                mkdir -p /var/lib/apt/lists/partial
-                mkdir -p /var/cache/apt/archives/partial
-                
-                # Check which package manager is available and update package list
-                if command -v apt-get >/dev/null 2>&1; then
-                    apt-get update
-                    apt-get install -y python3 python3-pip python3-venv curl unzip
-                elif command -v yum >/dev/null 2>&1; then
-                    yum update -y
-                    # Try to install Python 3.8+ for Oracle Linux
-                    yum install -y python38 python38-pip curl unzip || yum install -y python3 python3-pip curl unzip
-                    # Create symlinks if python38 was installed
-                    if command -v python3.8 >/dev/null 2>&1; then
-                        ln -sf /usr/bin/python3.8 /usr/bin/python3
-                        ln -sf /usr/bin/pip3.8 /usr/bin/pip3
-                    fi
-                elif command -v microdnf >/dev/null 2>&1; then
-                    microdnf update
-                    microdnf install -y python3 python3-pip curl unzip
-                elif command -v apk >/dev/null 2>&1; then
-                    apk update
-                    apk add --no-cache python3 py3-pip curl unzip
-                else
-                    echo "No supported package manager found"
-                    exit 1
-                fi
-
-                echo "===== Setting up Python Virtual Environment ====="
-                # Remove any existing venv directory
-                rm -rf venv
-                
-                # Create virtual environment with multiple fallback methods
-                if python3 -m venv venv --copies; then
-                    echo "Created venv with --copies"
-                elif python3 -m venv venv --system-site-packages; then
-                    echo "Created venv with --system-site-packages"
-                elif python3 -c "import venv; venv.create('venv', with_pip=True)"; then
-                    echo "Created venv with Python API"
-                else
-                    echo "Failed to create venv, installing packages globally with --break-system-packages"
-                    pip3 install --upgrade pip --break-system-packages
-                    pip3 install -r requirements.txt --break-system-packages
-                    # Skip venv activation for the rest of the script
-                    echo "export SKIP_VENV=true" > /tmp/venv_status
-                fi
-                
-                # Only activate venv if it was created successfully
-                if [ ! -f "/tmp/venv_status" ] && [ -f "venv/bin/activate" ]; then
-                    . venv/bin/activate
-                    pip install --upgrade pip
-                    pip install -r requirements.txt
-                fi
-
-                echo "===== Installing SonarQube Scanner ====="
-                # Install Docker (if not already available)
-                if ! command -v docker >/dev/null 2>&1; then
-                    apt-get update
-                    apt-get install -y ca-certificates curl gnupg lsb-release
-                    mkdir -p /etc/apt/keyrings
-                    curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
-                    echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null
-                    apt-get update
-                    apt-get install -y docker-ce-cli
-                fi
-                
-                echo "===== SonarQube Scanner will use Docker ====="
-                # We'll use docker run command in SonarQube Analysis stage
-
-                echo "===== Verification ====="
-                java -version
-                python3 --version
-                docker --version
-                
-                # Check Python environment
-                if [ -f "venv/bin/activate" ]; then
-                    echo "Using virtual environment:"
-                    . venv/bin/activate && python -c "import sys; print('Python:', sys.version)"
-                    . venv/bin/activate && pip list | head -10
-                else
-                    echo "Using global Python:"
-                    python3 -c "import sys; print('Python:', sys.version)"
-                    pip3 list | head -10
-                fi
+                python3 -m venv venv
+                . venv/bin/activate
+                pip install --upgrade pip
+                pip install -r requirements.txt
                 '''
             }
         }
-
+        
         stage('Run Tests & Coverage') {
             steps {
                 sh '''
-                echo "===== Running Tests ====="
-                
-                # Use virtual environment if available, otherwise use global Python
-                if [ -f "venv/bin/activate" ]; then
-                    echo "Using virtual environment for tests"
-                    . venv/bin/activate
-                    python -m pytest --maxfail=1 --disable-warnings -q --cov=app --cov-report=xml tests/
-                else
-                    echo "Using global Python for tests"
-                    python3 -m pytest --maxfail=1 --disable-warnings -q --cov=app --cov-report=xml tests/
-                fi
+                venv/bin/pytest --maxfail=1 --disable-warnings -q --cov=app --cov-report=xml
                 '''
             }
         }
-
         stage('SonarQube Analysis') {
             steps {
-                withSonarQubeEnv('Sonarqube') { // Ensure 'Sonarqube' matches Jenkins config
-                    sh '''
-                    echo "===== Running SonarQube Analysis with Docker ====="
-                    
-                    # Get current working directory
-                    WORKSPACE_DIR=$(pwd)
-                    
-                    # Debug: Show environment variables and files
-                    echo "SONAR_HOST_URL: ${SONAR_HOST_URL}"
-                    echo "SONAR_AUTH_TOKEN: [HIDDEN]"
-                    echo "Current workspace files:"
-                    ls -la
-                    
-                    # Override SONAR_HOST_URL to use host network instead of container IP
-                    # Use host.docker.internal or the actual Jenkins host IP
-                    SONAR_HOST_URL_OVERRIDE="http://host.docker.internal:9000"
-                    
-                    echo "Using SONAR_HOST_URL_OVERRIDE: ${SONAR_HOST_URL_OVERRIDE}"
-                    
-                    # Run SonarQube Scanner using Docker with proper token and host network
-                    docker run --rm \
-                        -e SONAR_HOST_URL="${SONAR_HOST_URL_OVERRIDE}" \
-                        -e SONAR_TOKEN="${SONAR_AUTH_TOKEN}" \
-                        -v "${WORKSPACE_DIR}:/usr/src" \
-                        -w /usr/src \
-                        --add-host=host.docker.internal:host-gateway \
-                        sonarsource/sonar-scanner-cli:latest
-                    '''
+                withSonarQubeEnv('Sonarqube') {
+                    sh 'sonar-scanner'
                 }
             }
         }
 
         stage('Build Docker Image') {
             steps {
-                 // Ensure Docker commands run on the *host* using the mounted socket
-                sh '''
-                echo "===== Building Docker Image ====="
-                docker build -t fastapi-app:latest .
-                '''
+                sh 'docker build -t fastapi-app:latest .'
             }
         }
-
         stage('Deploy Container') {
             steps {
-                sh '''
-                echo "===== Deploying Container ====="
-                # Stop and remove previous container if it exists
-                docker stop fastapi-app-container || true
-                docker rm fastapi-app-container || true
-                # Run the new container
-                docker run -d --name fastapi-app-container -p 8000:8000 fastapi-app:latest
-                '''
-            }
-        }
-
-         stage('Push to Registry') {
-            steps {
-                withCredentials([usernamePassword(
-                    credentialsId: 'dockerhub-cred', // Ensure this matches Jenkins credential ID
-                    usernameVariable: 'DOCKER_USER',
-                    passwordVariable: 'DOCKER_PASS'
-                )]) {
-                    sh '''
-                    echo "===== Pushing to Docker Registry ====="
-                    echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
-                    # Tag the image correctly for Docker Hub
-                    docker tag fastapi-app:latest $DOCKER_USER/fastapi-app:latest
-                    docker push $DOCKER_USER/fastapi-app:latest
-                    # Optional: Logout
-                    # docker logout
-                    '''
-                }
+                sh 'docker run -d -p 8000:8000 fastapi-app:latest'
             }
         }
     }
-
-
     post {
         always {
             echo "Pipeline finished"
