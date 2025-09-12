@@ -15,23 +15,35 @@ pipeline {
         // (ลบทิ้งได้)
     // }
 
-    stages {
-        stage('Checkout') {
-            steps {
-                git branch: 'main', url: 'https://github.com/adithep-bm/simple-fastapi-app.git'
+        stages {
+            stage('Checkout') {
+                steps {
+                    git branch: 'main', url: 'https://github.com/adithep-bm/simple-fastapi-app.git'
+                }
             }
-        }
 
-        stage('Install Java 17 for Scanner') {
-            steps {
-                sh '''
-                set -eux
-                apt-get update
-                apt-get install -y openjdk-21-jre-headless
-                java -version
-                '''
-            }
-            }
+            stage('Install Java 17 for Scanner') {
+                steps {
+                    sh '''
+                    set -eux
+                    apt-get update
+                    apt-get install -y openjdk-21-jre-headless
+                    java -version
+                    '''
+                }
+                }
+
+            stage('Install docker CLI') {
+        steps {
+            sh '''
+            set -eux
+            apt-get update
+            # บน Debian trixie มีแพ็กเกจ docker.io ให้ใช้
+            apt-get install -y docker.io
+            docker version
+            '''
+        }
+        }
 
         stage('Setup venv') {
             steps {
@@ -73,7 +85,7 @@ pipeline {
             }
         }
 
-
+        
         // (ถ้าตั้ง Webhook ระหว่าง SonarQube -> Jenkins แล้ว ค่อยเปิดสเตจนี้)
         // stage('Quality Gate') {
         //     steps {
