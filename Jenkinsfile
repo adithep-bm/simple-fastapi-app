@@ -21,6 +21,17 @@ pipeline {
             }
         }
 
+        stage('Install Java 17 for Scanner') {
+            steps {
+                sh '''
+                set -eux
+                apt-get update
+                apt-get install -y openjdk-17-jre-headless
+                java -version
+                '''
+            }
+            }
+
         stage('Setup venv') {
             steps {
                 sh '''
