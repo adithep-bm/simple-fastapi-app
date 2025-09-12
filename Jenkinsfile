@@ -1,6 +1,12 @@
 pipeline {
     agent {
         docker {
+            image 'eclipse-temurin:21-jdk'
+            args '--privileged -v /var/run/docker.sock:/var/run/docker.sock --user root'
+        }
+    }e {
+    agent {
+        docker {
             image 'eclipse-temurin:17-jdk'
             args '-v /var/run/docker.sock:/var/run/docker.sock -u root'
         }
@@ -80,10 +86,10 @@ pipeline {
                 fi
 
                 echo "===== Installing SonarQube Scanner ====="
-                # Use SonarQube Scanner version 4.7.0 that supports Java 17
-                curl -L --output sonar-scanner-cli.zip https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-4.7.0.2747-linux.zip
+                # Use SonarQube Scanner latest version with Java 21
+                curl -L --output sonar-scanner-cli.zip https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-4.8.0.2856-linux.zip
                 unzip sonar-scanner-cli.zip
-                mv sonar-scanner-4.7.0.2747-linux /opt/sonar-scanner
+                mv sonar-scanner-4.8.0.2856-linux /opt/sonar-scanner
                 ln -sf /opt/sonar-scanner/bin/sonar-scanner /usr/local/bin/sonar-scanner
 
                 echo "===== Verification ====="
