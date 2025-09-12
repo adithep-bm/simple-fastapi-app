@@ -35,7 +35,15 @@ pipeline {
         stage('SonarQube Analysis') {
             steps {
                 withSonarQubeEnv('Sonarqube') {
-                    sh 'sonar-scanner'
+                    sh '''
+                    sonar-scanner \
+                        -Dsonar.projectKey=fastapi \
+                        -Dsonar.projectName=FastAPI-App \
+                        -Dsonar.projectVersion=1.0 \
+                        -Dsonar.sources=app \
+                        -Dsonar.sourceEncoding=UTF-8 \
+                        -Dsonar.python.coverage.reportPaths=coverage.xml
+                    '''
                 }
             }
         }
