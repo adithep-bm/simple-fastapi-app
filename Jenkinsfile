@@ -4,12 +4,6 @@ pipeline {
             image 'eclipse-temurin:21-jdk'
             args '--privileged -v /var/run/docker.sock:/var/run/docker.sock --user root'
         }
-    }e {
-    agent {
-        docker {
-            image 'eclipse-temurin:17-jdk'
-            args '-v /var/run/docker.sock:/var/run/docker.sock -u root'
-        }
     }
 
     environment {
