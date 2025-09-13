@@ -34,16 +34,16 @@ pipeline {
                 }
 
             stage('Install docker CLI') {
-        steps {
-            sh '''
-            set -eux
-            apt-get update
-            # บน Debian trixie มีแพ็กเกจ docker.io ให้ใช้
-            apt-get install -y docker.io
-            docker version
-            '''
-        }
-        }
+                steps {
+                    sh '''
+                    set -eux
+                    apt-get update
+                    # บน Debian trixie มีแพ็กเกจ docker.io ให้ใช้
+                    apt-get install -y docker.io
+                    docker version
+                    '''
+                }
+            }
 
         stage('Setup venv') {
             steps {
