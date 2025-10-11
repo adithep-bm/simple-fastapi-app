@@ -75,7 +75,7 @@ pipeline {
             steps {
                 withSonarQubeEnv('Sonarqube') {
                 sh """
-                    "${tool 'SonarScanner'}/bin/sonar-scanner" \
+                    "${tool 'Sonarqube'}/bin/sonar-scanner" \
                     -Dsonar.projectKey=fastapi \
                     -Dsonar.sources=app \
                     -Dsonar.tests=tests \
